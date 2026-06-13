@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { KeywordRoutingScanTexts } from "@/lib/message-extractor";
-import { findMatchingKeywordRoutingRule, ruleMatchesText } from "@/lib/keyword-routing/matcher";
+import { findMatchingKeywordRoutingRule } from "@/lib/keyword-routing/matcher";
 import type { KeywordRoutingRule } from "@/repository/keyword-routing-rules";
 
 let nextRuleId = 1;
@@ -32,30 +32,6 @@ function makeTexts(overrides: Partial<KeywordRoutingScanTexts> = {}): KeywordRou
   };
 }
 
-describe("ruleMatchesText", () => {
-  it("大小写敏感（默认）：仅匹配完全一致的大小写", () => {
-    const rule = { keyword: "EXAMPLE DIALOGE", caseSensitive: true };
-
-    expect(ruleMatchesText(rule, "prefix EXAMPLE DIALOGE suffix")).toBe(true);
-    expect(ruleMatchesText(rule, "prefix example dialoge suffix")).toBe(false);
-  });
-
-  it("大小写不敏感：匹配任意大小写组合", () => {
-    const rule = { keyword: "EXAMPLE DIALOGE", caseSensitive: false };
-
-    expect(ruleMatchesText(rule, "EXAMPLE DIALOGE")).toBe(true);
-    expect(ruleMatchesText(rule, "example dialoge")).toBe(true);
-    expect(ruleMatchesText(rule, "Example Dialoge")).toBe(true);
-  });
-
-  it("子串语义：关键词出现在较长句子中也算命中", () => {
-    const rule = { keyword: "magic-token", caseSensitive: true };
-
-    expect(ruleMatchesText(rule, "please include the magic-token in your reply")).toBe(true);
-    expect(ruleMatchesText(rule, "no token here")).toBe(false);
-  });
-});
-
 describe("findMatchingKeywordRoutingRule", () => {
   it("无规则时返回 null", () => {
     const result = findMatchingKeywordRoutingRule(
@@ -84,13 +60,14 @@ describe("findMatchingKeywordRoutingRule", () => {
   });
 
   describe("sourceModel 约束", () => {
-    it("sourceModel 非空时要求与请求模型严格相等", () => {
+    it("sourceModel 非空时与请求模型大小写不敏感相等（对齐 model-guard 语义）", () => {
       const rule = makeRule({ sourceModel: "claude-opus-4-8" });
       const texts = makeTexts({ lastUserTexts: ["EXAMPLE DIALOGE"] });
 
       expect(findMatchingKeywordRoutingRule([rule], texts, "claude-opus-4-8")?.rule).toBe(rule);
       expect(findMatchingKeywordRoutingRule([rule], texts, "claude-sonnet-4-5")).toBeNull();
-      expect(findMatchingKeywordRoutingRule([rule], texts, "CLAUDE-OPUS-4-8")).toBeNull();
+      // 大小写不敏感：大写请求模型同样命中（与 ProxyModelGuard 的 allowedModels 比较保持一致）
+      expect(findMatchingKeywordRoutingRule([rule], texts, "CLAUDE-OPUS-4-8")?.rule).toBe(rule);
     });
 
     it("sourceModel 为 null 或空字符串时匹配任意请求模型", () => {
@@ -163,6 +140,18 @@ describe("findMatchingKeywordRoutingRule", () => {
 
       expect(findMatchingKeywordRoutingRule([empty, whitespace], texts, null)).toBeNull();
     });
+  });
+
+  it("Latin 关键词：大小写不敏感匹配任意大小写，大小写敏感仅匹配一致大小写", () => {
+    const texts = makeTexts({ lastUserTexts: ["prefix Example Dialoge suffix"] });
+
+    const insensitiveRule = makeRule({ keyword: "EXAMPLE DIALOGE", caseSensitive: false });
+    expect(findMatchingKeywordRoutingRule([insensitiveRule], texts, null)?.rule).toBe(
+      insensitiveRule
+    );
+
+    const sensitiveRule = makeRule({ keyword: "EXAMPLE DIALOGE", caseSensitive: true });
+    expect(findMatchingKeywordRoutingRule([sensitiveRule], texts, null)).toBeNull();
   });
 
   it("中文关键词：大小写敏感与不敏感均能命中 CJK 文本", () => {

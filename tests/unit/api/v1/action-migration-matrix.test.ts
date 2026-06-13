@@ -118,6 +118,7 @@ describe("v1 action migration matrix", () => {
       "system-config",
       "request-filters",
       "error-rules",
+      "keyword-routing",
       "rate-limit-stats",
       "proxy-status",
       "dispatch-simulator",

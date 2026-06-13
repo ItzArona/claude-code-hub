@@ -163,6 +163,56 @@ describe("ProxySession endpoint policy", () => {
   });
 });
 
+describe("ProxySession.getBillingOriginalModel", () => {
+  it("无关键词路由审计时返回 getOriginalModel()", () => {
+    const session = createSession({ originalModel: "orig-model", redirectedModel: "redir-model" });
+    expect(session.getBillingOriginalModel()).toBe("orig-model");
+  });
+
+  it("发生关键词路由时返回审计中的用户请求模型，且不影响 getOriginalModel()", () => {
+    const session = createSession({ redirectedModel: "target-model" });
+    session.setKeywordRoutingAudit({
+      userRequestedModel: "user-model",
+      routedModel: "target-model",
+      ruleId: 1,
+      keyword: "kw",
+      matchedIn: "user",
+    });
+
+    expect(session.getBillingOriginalModel()).toBe("user-model");
+    // getOriginalModel() 仍返回目标模型，保证供应商路由按目标模型进行（不被计费修复破坏）
+    expect(session.getOriginalModel()).toBe("target-model");
+  });
+});
+
+describe("ProxySession.getCachedPriceDataByBillingSource - 关键词路由计费", () => {
+  it("配置 = original 且发生关键词路由时应按用户请求模型计费（而非关键词目标模型）", async () => {
+    const userPriceData: ModelPriceData = { input_cost_per_token: 1, output_cost_per_token: 2 };
+    const targetPriceData: ModelPriceData = { input_cost_per_token: 3, output_cost_per_token: 4 };
+
+    vi.mocked(getSystemSettings).mockResolvedValue(makeSystemSettings("original"));
+    vi.mocked(findLatestPriceByModel).mockImplementation(async (modelName: string) => {
+      if (modelName === "user-model") return makePriceRecord(modelName, userPriceData);
+      if (modelName === "target-model") return makePriceRecord(modelName, targetPriceData);
+      return null;
+    });
+
+    const session = createSession({ redirectedModel: "target-model" });
+    session.setKeywordRoutingAudit({
+      userRequestedModel: "user-model",
+      routedModel: "target-model",
+      ruleId: 1,
+      keyword: "kw",
+      matchedIn: "user",
+    });
+
+    const result = await session.getCachedPriceDataByBillingSource();
+    expect(result).toEqual(userPriceData);
+    expect(findLatestPriceByModel).toHaveBeenCalledWith("user-model");
+    expect(findLatestPriceByModel).not.toHaveBeenCalledWith("target-model");
+  });
+});
+
 describe("ProxySession.getCachedPriceDataByBillingSource", () => {
   it("配置 = original 时应优先使用原始模型", async () => {
     const originalPriceData: ModelPriceData = { input_cost_per_token: 1, output_cost_per_token: 2 };

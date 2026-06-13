@@ -250,6 +250,18 @@ export const ACTION_MIGRATION_MATRIX = [
     exportPolicy: "all-action-exports",
   },
   {
+    module: "keyword-routing",
+    sourceFile: "keyword-routing.ts",
+    resource: "keyword-routing-rules",
+    endpointFamilies: [
+      "/api/v1/keyword-routing-rules",
+      "/api/v1/keyword-routing-rules/cache:refresh",
+      "/api/v1/keyword-routing-rules/cache/stats",
+    ],
+    access: "admin",
+    exportPolicy: "all-action-exports",
+  },
+  {
     module: "rate-limit-stats",
     sourceFile: "rate-limit-stats.ts",
     resource: "dashboard",

@@ -19,9 +19,10 @@ vi.mock("@/actions/keyword-routing", () => ({
   getKeywordRoutingCacheStats: getKeywordRoutingCacheStatsMock,
 }));
 
-vi.mock("@/lib/auth", () => ({
-  validateAuthToken: validateAuthTokenMock,
-}));
+vi.mock("@/lib/auth", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/auth")>();
+  return { ...actual, validateAuthToken: validateAuthTokenMock };
+});
 
 const { callV1Route } = await import("../test-utils");
 

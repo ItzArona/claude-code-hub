@@ -12,24 +12,6 @@ export interface KeywordRoutingMatch {
 }
 
 /**
- * 判断规则的关键词是否命中给定文本（子串匹配）
- *
- * caseSensitive=false 时双方统一转为小写后比较
- *
- * 注意：依据 String.includes 语义，空关键词会命中任意文本；
- * 空关键词的防御性过滤由 findMatchingKeywordRoutingRule 负责
- */
-export function ruleMatchesText(
-  rule: Pick<KeywordRoutingRule, "keyword" | "caseSensitive">,
-  text: string
-): boolean {
-  if (rule.caseSensitive) {
-    return text.includes(rule.keyword);
-  }
-  return text.toLowerCase().includes(rule.keyword.toLowerCase());
-}
-
-/**
  * 创建小写文本数组的惰性缓存
  *
  * 仅在首次遇到大小写不敏感规则时才构建小写副本，且整个匹配调用内只构建一次，
@@ -52,7 +34,7 @@ function createLoweredTextsCache(source: readonly string[]): () => readonly stri
  * - 按传入顺序逐条评估（调用方需保证 priority 升序、id 升序），首个命中即返回
  * - 跳过已禁用的规则（深度防御）
  * - 跳过关键词为空或仅空白字符的规则（空关键词会匹配一切，防御脏数据）
- * - sourceModel 非空时要求与请求模型严格相等（大小写敏感），否则跳过该规则
+ * - sourceModel 非空时要求与请求模型相等（大小写不敏感，对齐 ProxyModelGuard），否则跳过该规则
  * - 先检查 systemTexts，再检查 lastUserTexts，matchedIn 反映命中位置
  *
  * @param rules - 已按评估顺序排列的规则列表
@@ -77,7 +59,10 @@ export function findMatchingKeywordRoutingRule(
       continue;
     }
 
-    if (rule.sourceModel && rule.sourceModel !== requestedModel) {
+    if (
+      rule.sourceModel &&
+      rule.sourceModel.toLowerCase() !== (requestedModel ?? "").toLowerCase()
+    ) {
       continue;
     }
 
