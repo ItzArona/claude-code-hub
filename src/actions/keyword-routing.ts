@@ -388,16 +388,31 @@ export async function refreshKeywordRoutingCacheAction(): Promise<
 /**
  * 获取缓存统计信息
  */
-export async function getKeywordRoutingCacheStats() {
+export async function getKeywordRoutingCacheStats(): Promise<
+  ActionResult<ReturnType<typeof keywordRoutingEngine.getStats>>
+> {
   try {
+    const t = await getTranslations("settings.keywordRouting.validation");
     const session = await getSession();
     if (session?.user.role !== "admin") {
-      return null;
+      return {
+        ok: false,
+        error: t("permissionDenied"),
+        errorCode: "PERMISSION_DENIED",
+      };
     }
 
-    return keywordRoutingEngine.getStats();
+    return {
+      ok: true,
+      data: keywordRoutingEngine.getStats(),
+    };
   } catch (error) {
     logger.error("[KeywordRoutingAction] Failed to get cache stats:", error);
-    return null;
+    const t = await getTranslations("settings.keywordRouting.validation");
+    return {
+      ok: false,
+      error: t("operationFailed"),
+      errorCode: "OPERATION_FAILED",
+    };
   }
 }

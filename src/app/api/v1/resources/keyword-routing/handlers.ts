@@ -81,14 +81,6 @@ export async function getKeywordRoutingCacheStats(c: Context): Promise<Response>
   const actions = await import("@/actions/keyword-routing");
   const result = await callAction(c, actions.getKeywordRoutingCacheStats, [], c.get("auth"));
   if (!result.ok) return actionError(c, result);
-  if (result.data == null) {
-    return createProblemResponse({
-      status: 403,
-      instance: new URL(c.req.url).pathname,
-      errorCode: "auth.forbidden",
-      detail: "Admin access is required.",
-    });
-  }
   return jsonResponse(result.data);
 }
 

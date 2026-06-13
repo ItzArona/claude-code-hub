@@ -82,6 +82,7 @@
     "createFailed": "キーワードルーティングルールの作成に失敗しました",
     "updateFailed": "キーワードルーティングルールの更新に失敗しました",
     "deleteFailed": "キーワードルーティングルールの削除に失敗しました",
-    "refreshCacheFailed": "キャッシュのリフレッシュに失敗しました"
+    "refreshCacheFailed": "キャッシュのリフレッシュに失敗しました",
+    "operationFailed": "操作に失敗しました"
   }
 }

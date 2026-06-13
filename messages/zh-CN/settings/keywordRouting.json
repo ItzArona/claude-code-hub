@@ -82,6 +82,7 @@
     "createFailed": "创建关键词路由规则失败",
     "updateFailed": "更新关键词路由规则失败",
     "deleteFailed": "删除关键词路由规则失败",
-    "refreshCacheFailed": "刷新缓存失败"
+    "refreshCacheFailed": "刷新缓存失败",
+    "operationFailed": "操作失败"
   }
 }

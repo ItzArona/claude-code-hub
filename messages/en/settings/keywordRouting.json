@@ -82,6 +82,7 @@
     "createFailed": "Failed to create keyword routing rule",
     "updateFailed": "Failed to update keyword routing rule",
     "deleteFailed": "Failed to delete keyword routing rule",
-    "refreshCacheFailed": "Failed to refresh cache"
+    "refreshCacheFailed": "Failed to refresh cache",
+    "operationFailed": "Operation failed"
   }
 }

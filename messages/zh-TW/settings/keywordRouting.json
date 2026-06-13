@@ -82,6 +82,7 @@
     "createFailed": "建立關鍵詞路由規則失敗",
     "updateFailed": "更新關鍵詞路由規則失敗",
     "deleteFailed": "刪除關鍵詞路由規則失敗",
-    "refreshCacheFailed": "刷新快取失敗"
+    "refreshCacheFailed": "刷新快取失敗",
+    "operationFailed": "操作失敗"
   }
 }

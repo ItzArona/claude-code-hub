@@ -72,7 +72,8 @@ async function KeywordRoutingToggleContent() {
 }
 
 async function KeywordRoutingRefreshAction() {
-  const cacheStats = await getKeywordRoutingCacheStats();
+  const result = await getKeywordRoutingCacheStats();
+  const cacheStats = result.ok ? result.data : null;
   return <RefreshCacheButton stats={cacheStats} />;
 }
 
