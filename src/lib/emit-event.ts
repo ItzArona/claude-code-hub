@@ -56,11 +56,19 @@ export async function emitSensitiveWordsUpdated(): Promise<void> {
  */
 export async function emitKeywordRoutingRulesUpdated(): Promise<void> {
   if (typeof process !== "undefined" && process.env.NEXT_RUNTIME !== "edge") {
+    let logger: typeof import("@/lib/logger").logger | undefined;
+    try {
+      ({ logger } = await import("@/lib/logger"));
+    } catch {
+      // 忽略导入错误 (silent degrade)
+    }
+
     try {
       const { eventEmitter } = await import("@/lib/event-emitter");
       eventEmitter.emitKeywordRoutingRulesUpdated();
-    } catch {
-      // 忽略导入错误
+      logger?.info?.("[emitKeywordRoutingRulesUpdated] Local event emitted");
+    } catch (error) {
+      logger?.warn?.("[emitKeywordRoutingRulesUpdated] Failed to emit local event", { error });
     }
 
     try {
@@ -68,8 +76,9 @@ export async function emitKeywordRoutingRulesUpdated(): Promise<void> {
         "@/lib/redis/pubsub"
       );
       await publishCacheInvalidation(CHANNEL_KEYWORD_ROUTING_RULES_UPDATED);
-    } catch {
-      // 忽略导入错误
+      logger?.info?.("[emitKeywordRoutingRulesUpdated] Redis pub/sub publish attempted");
+    } catch (error) {
+      logger?.warn?.("[emitKeywordRoutingRulesUpdated] Failed to publish to Redis", { error });
     }
   }
 }
