@@ -76,6 +76,22 @@ async function validateRuleFields(
 }
 
 /**
+ * 构建审计日志的规则快照（create / update 共用，避免两处字段集漂移）
+ */
+function toAuditSnapshot(rule: repo.KeywordRoutingRule) {
+  return {
+    id: rule.id,
+    keyword: rule.keyword,
+    sourceModel: rule.sourceModel,
+    targetModel: rule.targetModel,
+    caseSensitive: rule.caseSensitive,
+    priority: rule.priority,
+    description: rule.description,
+    isEnabled: rule.isEnabled,
+  };
+}
+
+/**
  * 获取所有关键词路由规则列表
  */
 export async function listKeywordRoutingRules(): Promise<repo.KeywordRoutingRule[]> {
@@ -150,16 +166,7 @@ export async function createKeywordRoutingRuleAction(data: {
       targetType: "keyword_routing_rule",
       targetId: String(result.id),
       targetName: result.keyword,
-      after: {
-        id: result.id,
-        keyword: result.keyword,
-        sourceModel: result.sourceModel,
-        targetModel: result.targetModel,
-        caseSensitive: result.caseSensitive,
-        priority: result.priority,
-        description: result.description,
-        isEnabled: result.isEnabled,
-      },
+      after: toAuditSnapshot(result),
       success: true,
     });
 
@@ -246,16 +253,7 @@ export async function updateKeywordRoutingRuleAction(
       targetType: "keyword_routing_rule",
       targetId: String(id),
       targetName: result.keyword,
-      after: {
-        id: result.id,
-        keyword: result.keyword,
-        sourceModel: result.sourceModel,
-        targetModel: result.targetModel,
-        caseSensitive: result.caseSensitive,
-        priority: result.priority,
-        description: result.description,
-        isEnabled: result.isEnabled,
-      },
+      after: toAuditSnapshot(result),
       success: true,
     });
 

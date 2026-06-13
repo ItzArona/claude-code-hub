@@ -154,14 +154,9 @@ describe("ProxyKeywordRoutingGuard", () => {
       "claude-sonnet-4-5"
     );
 
-    // request.model 与 message.model 均被改写
+    // request.model 与 message.model 均被改写（forwarder 在 CHAT_PIPELINE 下从 message 重新序列化转发体）
     expect(session.request.model).toBe("claude-opus-4-6");
     expect(session.request.message.model).toBe("claude-opus-4-6");
-
-    // buffer 重新生成并包含目标模型
-    const decoded = JSON.parse(new TextDecoder().decode(session.request.buffer as ArrayBuffer));
-    expect(decoded.model).toBe("claude-opus-4-6");
-    expect(decoded.messages).toEqual(DEFAULT_BODY.messages);
 
     // 审计信息完整
     expect(session.getKeywordRoutingAudit()).toEqual({
@@ -396,5 +391,55 @@ describe("ProxySession keyword routing audit on the provider chain", () => {
     // 链路项同样携带首次写入的审计信息
     session.addProviderToChain(makeProvider(2, "Provider B"), { reason: "initial_selection" });
     expect(session.getProviderChain()[0].keywordRouting).toEqual(AUDIT);
+  });
+
+  describe("enforces the user's allowedModels on the rewrite target", () => {
+    function setAllowedModels(session: ProxySession, allowedModels: string[]) {
+      session.setAuthState({
+        user: { id: 1, allowedModels },
+        key: { id: 1 },
+        apiKey: "sk-test",
+        success: true,
+      } as any);
+    }
+
+    it("skips the rewrite when the target model is not in the user's allowedModels", async () => {
+      const rule = createRule(); // target: claude-opus-4-6
+      vi.mocked(keywordRoutingEngine.match).mockReturnValue({ rule, matchedIn: "user" });
+      const session = await createJsonSession(DEFAULT_BODY); // requested: claude-sonnet-4-5
+      setAllowedModels(session, ["claude-sonnet-4-5"]);
+
+      const response = await ProxyKeywordRoutingGuard.ensure(session);
+
+      expect(response).toBeNull();
+      // 目标 opus 不在 allowedModels，规则被跳过，模型保持原样，避免用户经关键词文本绕过模型访问控制
+      expect(session.request.model).toBe("claude-sonnet-4-5");
+      expect(session.request.message.model).toBe("claude-sonnet-4-5");
+      expect(session.getKeywordRoutingAudit()).toBeNull();
+    });
+
+    it("allows the rewrite when the target model is in allowedModels (case-insensitive)", async () => {
+      const rule = createRule();
+      vi.mocked(keywordRoutingEngine.match).mockReturnValue({ rule, matchedIn: "user" });
+      const session = await createJsonSession(DEFAULT_BODY);
+      setAllowedModels(session, ["claude-sonnet-4-5", "CLAUDE-OPUS-4-6"]);
+
+      const response = await ProxyKeywordRoutingGuard.ensure(session);
+
+      expect(response).toBeNull();
+      expect(session.request.model).toBe("claude-opus-4-6");
+      expect(session.getKeywordRoutingAudit()).not.toBeNull();
+    });
+
+    it("allows the rewrite when the user has no model restrictions (empty allowedModels)", async () => {
+      const rule = createRule();
+      vi.mocked(keywordRoutingEngine.match).mockReturnValue({ rule, matchedIn: "user" });
+      const session = await createJsonSession(DEFAULT_BODY);
+      setAllowedModels(session, []);
+
+      const response = await ProxyKeywordRoutingGuard.ensure(session);
+
+      expect(session.request.model).toBe("claude-opus-4-6");
+    });
   });
 });

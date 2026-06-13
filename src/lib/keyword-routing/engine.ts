@@ -38,6 +38,10 @@ class KeywordRoutingRuleCache {
   private async setupEventListener(): Promise<void> {
     if (typeof process !== "undefined" && process.env.NEXT_RUNTIME !== "edge") {
       try {
+        // event-emitter 依赖 node:events，必须动态 import 以保持 edge runtime 兼容（不可改为顶层 import）。
+        // 这意味着监听器注册要等到此动态 import 完成，理论上存在“import 完成前到达的 emit 被漏掉”的窗口；
+        // 但实际不可达：所有 emit 源都是 repository 的 CRUD 写操作（先 await 数据库），发生在应用接收请求之后，
+        // 远晚于模块加载期同步触发的本构造调用。先注册本地 eventEmitter 再 await Redis 订阅，使本地注册尽可能早。
         const { eventEmitter } = await import("@/lib/event-emitter");
         const handler = () => {
           logger.info("[KeywordRoutingRuleCache] Received update event, reloading...");

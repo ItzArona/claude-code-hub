@@ -744,6 +744,17 @@ export class ProxySession {
   }
 
   /**
+   * 获取用于计费 / 审计持久化的原始模型（用户真正请求的模型）。
+   * 与 getOriginalModel() 的区别：关键词路由在供应商选择之前改写了 request.model，
+   * 此时 getOriginalModel() 返回关键词目标模型（供应商路由依赖该行为，不可更改），
+   * 但 original_model 持久化与 "original" 计费应反映用户真正请求的模型。
+   * 因此命中关键词路由时优先返回审计中保存的用户请求模型。
+   */
+  getBillingOriginalModel(): string | null {
+    return this.keywordRoutingAudit?.userRequestedModel ?? this.getOriginalModel();
+  }
+
+  /**
    * 获取当前模型（可能已重定向，用于转发）
    */
   getCurrentModel(): string | null {
@@ -903,7 +914,7 @@ export class ProxySession {
     }
 
     const text = typeof blockObj.text === "string" ? blockObj.text.trim() : "";
-    if (!text || text.toLowerCase() !== "warmup") {
+    if (text?.toLowerCase() !== "warmup") {
       return false;
     }
 
@@ -950,7 +961,7 @@ export class ProxySession {
     // priced correctly. The cache key already incorporates these resolved models.
     modelOverride?: { originalModel?: string | null; redirectedModel?: string | null }
   ): Promise<ResolvedPricing | null> {
-    const originalModel = modelOverride?.originalModel ?? this.getOriginalModel();
+    const originalModel = modelOverride?.originalModel ?? this.getBillingOriginalModel();
     const redirectedModel = modelOverride?.redirectedModel ?? this.request.model;
     if (!originalModel && !redirectedModel) {
       return null;

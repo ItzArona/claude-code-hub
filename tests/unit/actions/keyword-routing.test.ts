@@ -411,16 +411,22 @@ describe("keyword-routing actions", () => {
       const { getKeywordRoutingCacheStats } = await import("@/actions/keyword-routing");
       const stats = await getKeywordRoutingCacheStats();
 
-      expect(stats).toEqual({ ruleCount: 2, lastReloadTime: 1750000000000, isLoading: false });
+      expect(stats).toEqual({
+        ok: true,
+        data: { ruleCount: 2, lastReloadTime: 1750000000000, isLoading: false },
+      });
     });
 
-    it("getKeywordRoutingCacheStats returns null for non-admins", async () => {
+    it("getKeywordRoutingCacheStats returns a permission error for non-admins", async () => {
       getSessionMock.mockResolvedValue({ user: { id: 2, role: "user" } });
 
       const { getKeywordRoutingCacheStats } = await import("@/actions/keyword-routing");
       const stats = await getKeywordRoutingCacheStats();
 
-      expect(stats).toBeNull();
+      expect(stats.ok).toBe(false);
+      if (!stats.ok) {
+        expect(stats.errorCode).toBe("PERMISSION_DENIED");
+      }
     });
   });
 });

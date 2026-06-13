@@ -75,6 +75,23 @@ export class ProxyKeywordRoutingGuard {
         return null;
       }
 
+      // 命中规则后，校验目标模型是否在用户的 allowedModels 限制内。
+      // ProxyModelGuard 在改写前已对原始模型执行过限制校验，且其后无任何步骤复查改写结果，
+      // 因此此处必须重新校验，防止用户经关键词文本把模型改写到限制之外（访问控制 / 计费绕过）。
+      if (!ProxyKeywordRoutingGuard.isTargetModelAllowedForUser(session, match.rule.targetModel)) {
+        logger.warn(
+          "[KeywordRoutingGuard] Skipped rule: target model not in user's allowedModels",
+          {
+            ruleId: match.rule.id,
+            keyword: match.rule.keyword,
+            targetModel: match.rule.targetModel,
+            requestedModel,
+            sessionId: session.sessionId,
+          }
+        );
+        return null;
+      }
+
       // 规则命中但目标模型与请求模型相同：记录审计但不改写
       if (match.rule.targetModel === requestedModel) {
         session.setKeywordRoutingAudit({
@@ -101,14 +118,13 @@ export class ProxyKeywordRoutingGuard {
         return null;
       }
 
-      // 改写请求模型（在供应商选择之前生效）
+      // 改写请求模型（在供应商选择之前生效）。
+      // 仅改写 request.message.model 与缓存的 request.model；无需重建 request.buffer：
+      // 关键词路由仅运行于 CHAT_PIPELINE（default policy，bypassForwarderPreprocessing=false），
+      // forwarder 在该模式下从 request.message 重新序列化转发体，不读取 request.buffer
+      //（buffer 仅在 raw passthrough / bypassForwarderPreprocessing=true 时用于原样透传，而该 pipeline 不含关键词路由）。
       session.request.message.model = match.rule.targetModel;
       session.request.model = match.rule.targetModel;
-
-      // 重新生成请求 buffer（使用 TextEncoder）
-      const updatedBody = JSON.stringify(session.request.message);
-      const encoder = new TextEncoder();
-      session.request.buffer = encoder.encode(updatedBody).buffer;
 
       // 记录审计信息（不调用 setOriginalModel，见文件头注释）
       session.setKeywordRoutingAudit({
@@ -136,5 +152,20 @@ export class ProxyKeywordRoutingGuard {
       logger.error("[KeywordRoutingGuard] Routing error:", error);
       return null; // 降级：路由失败时放行，不阻塞正常请求
     }
+  }
+
+  /**
+   * 校验目标模型是否在用户配置的 allowedModels 限制内。
+   * - allowedModels 为空（无限制）时放行
+   * - 大小写不敏感精确匹配，对齐 ProxyModelGuard 的语义
+   * - 无用户上下文时放行（与 ProxyModelGuard 一致，鉴权应已在更早阶段失败）
+   */
+  private static isTargetModelAllowedForUser(session: ProxySession, targetModel: string): boolean {
+    const allowedModels = session.authState?.user?.allowedModels ?? [];
+    if (allowedModels.length === 0) {
+      return true;
+    }
+    const targetLower = targetModel.toLowerCase();
+    return allowedModels.some((pattern) => pattern.toLowerCase() === targetLower);
   }
 }
