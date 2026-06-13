@@ -58,6 +58,11 @@ export class ProxyKeywordRoutingGuard {
         return null;
       }
 
+      // 防御性空值检查：确保 message 对象存在（请求体解析可能失败）
+      if (!session.request.message) {
+        return null;
+      }
+
       // 提取待扫描文本（系统提示词 + 最后一条用户消息）
       const texts = extractKeywordRoutingTexts(session.request.message);
       if (texts.systemTexts.length === 0 && texts.lastUserTexts.length === 0) {

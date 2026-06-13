@@ -223,6 +223,11 @@ export function extractKeywordRoutingTexts(
   const systemTexts: string[] = [];
   const lastUserTexts: string[] = [];
 
+  // 防御性空值检查：确保 message 对象存在
+  if (!message) {
+    return { systemTexts, lastUserTexts };
+  }
+
   // 1. 提取 system 字段（Claude 格式，string 或 content block 数组）
   if ("system" in message) {
     systemTexts.push(...extractSystemText(message.system));
