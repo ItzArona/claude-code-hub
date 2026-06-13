@@ -2,6 +2,7 @@
 
 import { formatInTimeZone } from "date-fns-tz";
 import { ArrowRight, Pencil, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useTimeZone, useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -22,6 +23,7 @@ interface RuleListTableProps {
 export function RuleListTable({ rules }: RuleListTableProps) {
   const t = useTranslations("settings");
   const timeZone = useTimeZone() ?? "UTC";
+  const router = useRouter();
   const [selectedRule, setSelectedRule] = useState<KeywordRoutingRule | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
@@ -30,6 +32,7 @@ export function RuleListTable({ rules }: RuleListTableProps) {
 
     if (result.ok) {
       toast.success(isEnabled ? t("keywordRouting.enable") : t("keywordRouting.disable"));
+      router.refresh();
     } else {
       toast.error(result.error);
     }
@@ -44,6 +47,7 @@ export function RuleListTable({ rules }: RuleListTableProps) {
 
     if (result.ok) {
       toast.success(t("keywordRouting.deleteSuccess"));
+      router.refresh();
     } else {
       toast.error(result.error);
     }
