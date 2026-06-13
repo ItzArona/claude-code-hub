@@ -8,7 +8,7 @@
 
 **🚀 Intelligent AI API relay platform — the control center for multi-provider onboarding, elastic routing, and granular operations**
 
-[![Container Image](https://img.shields.io/badge/ghcr.io-ding113%2Fclaude--code--hub-181717?logo=github)](https://github.com/ding113/claude-code-hub/pkgs/container/claude-code-hub)
+[![Container Image](https://img.shields.io/badge/ghcr.io-itzarona%2Fclaude--code--hub-181717?logo=github)](https://github.com/ItzArona/claude-code-hub/pkgs/container/claude-code-hub)
 [![License](https://img.shields.io/github/license/ding113/claude-code-hub)](LICENSE)
 [![GitHub Stars](https://img.shields.io/github/stars/ding113/claude-code-hub)](https://github.com/ding113/claude-code-hub/stargazers)
 [![Telegram Group](https://img.shields.io/badge/Telegram-Join%20Group-blue?logo=telegram)](https://t.me/ygxz_group)
